@@ -1,0 +1,101 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ---------- Enums ----------
+enum Lang {
+  ES
+  EN
+}
+
+enum TokenType {
+  VERIFY_EMAIL
+  RESET_PASSWORD
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+// ---------- Users & Auth ----------
+model User {
+  id           String         @id @default(uuid())
+  email        String         @unique
+  phone        String?
+  company      String?
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         String         // p.ej. USER | ADMIN | INSTRUCTOR | SALES
+  isVerified   Boolean        @default(false)
+
+  tokens       AuthToken[]
+  requests     CourseRequest[]  // leads creados por este usuario (si aplica)
+
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+model AuthToken {
+  id         String     @id @default(uuid())
+  userId     String
+  type       TokenType
+  token      String     @unique
+  expiresAt  DateTime
+  consumed   Boolean    @default(false)
+  consumedAt DateTime?
+  createdAt  DateTime   @default(now())
+
+  user       User       @relation(fields: [userId], references: [id])
+
+  @@index([userId, type, consumed])
+}
+
+// ---------- Courses & Leads ----------
+model Course {
+  id                 String          @id @default(uuid())
+  slug               String          @unique
+  title              String
+  description        String
+  durationMinutes    Int
+  price              Float
+  language           Lang            @default(ES)
+  imageUrl           String?
+  scormCloudCourseId String?
+  isActive           Boolean         @default(true)
+
+  requests           CourseRequest[]
+
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+}
+
+model CourseRequest {
+  id               String         @id @default(uuid())
+  userId           String?
+  courseId         String
+  status           RequestStatus  @default(PENDING)
+
+  // Captación sin login: fotografía del formulario tal cual llegó
+  contactSnapshot  Json?
+  consentMarketing Boolean        @default(false)
+
+  internalNotes    String?
+
+  user             User?          @relation(fields: [userId], references: [id])
+  course           Course         @relation(fields: [courseId], references: [id])
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([courseId, status])
+  @@index([userId, status])
+}

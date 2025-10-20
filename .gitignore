@@ -1,0 +1,17 @@
+# Dependencias
+node_modules
+
+# Builds
+dist
+coverage
+
+# Entornos
+.env
+.env.*
+
+# Prisma
+/prisma/dev.db
+/generated
+
+# Archivos del sistema
+.DS_Store
